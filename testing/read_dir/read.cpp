@@ -6,14 +6,15 @@ read in from a pin
 #include <iostream>
 #include <wiringPi.h>
 
-int main(){
+int main(int argc, char **argv){
   wiringPiSetupGpio();
-  printf("gpio pins w/ wiringpi\n");
-  int pin3 = 3;
-  pinMode(pin3,INPUT);
+  std::printf("gpio pins w/ wiringpi\n");
+  int pin = argc>1 ? std::stoi(argv[1]) : 4;
+  std::printf("using pin %d\n",pin);
+  pinMode(pin,INPUT);
   while(true){
-  std::printf("current value: %d\n",digitalRead(pin3));
-  delay(1000);
+    std::printf("current value: %d\n",digitalRead(pin));
+    delay(1000);
   }
 }
 
