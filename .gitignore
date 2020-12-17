@@ -1,0 +1,4 @@
+# ignore certain files
+*.out
+*.swp
+
