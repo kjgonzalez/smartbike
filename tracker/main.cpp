@@ -3,18 +3,18 @@
 tracker program for the bike-mounted pi
 
 implemented functions:
-
-missing functions: 
   * total speed (average)
   * total distance
   * total time
-  * total elevation change
   * current speed
   * max speed
+  * brake status
+
+missing functions: 
+  * total elevation change
   * current elevation
   * user-controlled start of tracking
   * user-controlled stop of tracking
-  * brake status
   * brake light activation
   * save data to file
   * save data to BINARY file
@@ -95,14 +95,15 @@ struct Braking{
     int pinL = -1;
     int pinR = -1;
     int (*pReader)(int) = nullptr;
-    Braking(void hw_reader(int),int pinLeft,pinRight){
+    Braking(int hw_reader(int), int pinLeft, int pinRight){
         /* hw_reader modeled after digitalRead(int pin) */
         pinL = pinLeft;
         pinR = pinRight;
         pReader = hw_reader;
     }
     void update(){
-    
+        stateL = pReader(pinL);
+        stateR = pReader(pinR);
     }
 
     void print(){
@@ -110,12 +111,12 @@ struct Braking{
     }
 
 
-
 };
 
 
 
 void isr_wheel(); // name here to avoid issues
+void isr_brake();
 void initialize_hw(){
     // any code directly initializing hardware is initialized here
     wiringPiSetupGpio();
@@ -124,13 +125,15 @@ void initialize_hw(){
     pinMode(pinBRL,INPUT);
     pinMode(pinBRR,INPUT);
     wiringPiISR(pinWHL,INT_EDGE_FALLING,isr_wheel);
+    wiringPiISR(pinBRL,INT_EDGE_BOTH,isr_brake);
+    wiringPiISR(pinBRR,INT_EDGE_BOTH,isr_brake);
 }
 
 // variable / object initializations
 LedMgr led(digitalWrite,pinLED); // external led object
 bool RUNNING=true; // graceful end via ctrl+c
 Spedometer sped(millis); // velocity, distance, and time tracking via hall sensor
-Braking brakes;
+Braking brakes(digitalRead,pinBRL,pinBRR);
 
 // functions (separate from other functions)
 void isr_ctrlc(int s){
@@ -141,7 +144,7 @@ void isr_ctrlc(int s){
 }
 
 void isr_wheel(){ sped.lap(); }
-
+void isr_brake(){ brakes.update(); }
 
 // main function
 int main(){
