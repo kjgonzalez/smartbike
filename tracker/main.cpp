@@ -109,9 +109,23 @@ struct Braking{
     void print(){
         std::printf("Left: %d | Right: %d\n",stateL,stateR);
     }
-
-
 };
+
+struct CsvSimple {
+    /* simple, per-item / per-line csv writer */
+    std::ofstream fout;
+    CsvSimple(std::string filename){
+        fout.open(filename);
+    }
+    ~CsvSimple(){ close(); }
+    void addval(int val){ fout << val<< ','; }
+    void addval(float val){ fout << val<< ','; }
+    void addval(double val){ fout << val<< ','; }
+    void addval(std::string val){ fout << val.c_str() << ','; }
+    void endl(){ fout << std::endl; }
+    void close(){ endl(); fout.close();}
+};
+
 
 
 
