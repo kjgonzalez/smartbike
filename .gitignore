@@ -2,3 +2,11 @@
 *.out
 *.swp
 
+# ignore visual studio stuff
+.vs/
+Debug/
+x64/
+smartbike.sln
+smartbike.vcxpro*
+
+

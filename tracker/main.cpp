@@ -1,5 +1,4 @@
 /*
-2020-dec-21
 tracker program for the bike-mounted pi
 
 implemented functions:
@@ -27,6 +26,7 @@ missing functions:
 #include <iostream> // debugging help
 #include <csignal> // help with debugging
 #include <wiringPi.h> // hardware interaction
+#include <fstream>
 
 // software constants
 constexpr float pi = 3.14159;
@@ -166,17 +166,25 @@ int main(){
     initialize_hw();
     std::signal(SIGINT,isr_ctrlc); // enable CTRL+C graceful exit
     
-    //looping step
-    while(RUNNING){
-
-    if(millis()%1000==0){
+    while (RUNNING) {
+        std::printf("---------------------------\n");
         led.toggle();
-        std::printf("----------------------\n");
         sped.print();
         brakes.print();
-        }
-
+        std::printf("time elapsed: %d\n", millis());
+        delay(2000);
     }
+    ////looping step
+    //while(RUNNING){
+
+    //if(millis()%1000==0){
+    //    led.toggle();
+    //    std::printf("----------------------\n");
+    //    sped.print();
+    //    brakes.print();
+    //    }
+
+    //}
 
     return 0;
 } // main
