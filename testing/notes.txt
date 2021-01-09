@@ -1,0 +1,8 @@
+Miscellaneous notes
+
+= auto-start a program with crontab ========================
+# @reboot sleep 1 && screen -d -S <screen_name> -m <desired_command>
+
+
+
+
