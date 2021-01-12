@@ -9,4 +9,6 @@ x64/
 smartbike.sln
 smartbike.vcxpro*
 
+# ignore sample output
+*.csv
 

@@ -25,8 +25,9 @@ missing functions:
 
 #include <iostream> // debugging help
 #include <csignal> // help with debugging
-#include <wiringPi.h> // hardware interaction
 #include <fstream>
+#include <time.h>
+#include <wiringPi.h> // hardware interaction
 
 // software constants
 constexpr float pi = 3.14159;
@@ -38,6 +39,11 @@ constexpr int pinWHL = 4;
 constexpr int pinBRL = 17;
 constexpr int pinBRR = 27;
 
+std::string tstamp(); // declare function here for ease of use later
+void isr_wheel(); // declare here to avoid issues
+void isr_brake();
+
+// classes
 struct LedMgr{
     bool state=false;
     int pin=-1;
@@ -75,7 +81,8 @@ struct Spedometer{
     void startTimer(){tStart = pMills(); }
     float getVelCurr(){
         /* return current speed, m/s */
-        if(pMills()-tprev > stopThresh) return 0;
+        if (counter == 0) return 0; // prevent noise output
+        if(pMills()-tprev > stopThresh) return 0; // have detected approximate stop
         else return circ / elapsed * 1000;
     }
     float getDistTotal(){ return circ * counter; } // meters
@@ -126,11 +133,19 @@ struct CsvSimple {
     void close(){ endl(); fout.close();}
 };
 
+std::string tstamp() {
+    /* return current time as a string in format YYYYMMMDD-HHmmSS */
+    time_t timer;
+    tm* curr_tm;
+    time(&timer);
+    curr_tm = localtime(&timer);
+    char date_string[100];
+    strftime(date_string, 50, "%Y%b%d-%H%M%S", curr_tm);
+    std::string str(date_string);
+    return str;
+}
 
 
-
-void isr_wheel(); // name here to avoid issues
-void isr_brake();
 void initialize_hw(){
     // any code directly initializing hardware is initialized here
     wiringPiSetupGpio();
@@ -141,6 +156,22 @@ void initialize_hw(){
     wiringPiISR(pinWHL,INT_EDGE_FALLING,isr_wheel);
     wiringPiISR(pinBRL,INT_EDGE_BOTH,isr_brake);
     wiringPiISR(pinBRR,INT_EDGE_BOTH,isr_brake);
+}
+
+void announce_on(LedMgr light) {
+    /* announce to user that program is on, using available outputs */
+    std::printf("Tracker program starting... \n");
+    light.toggle();
+    delay(166);
+    light.toggle(); // blink 1
+    delay(166);
+    light.toggle();
+    delay(166);
+    light.toggle(); // blink 2
+    delay(166);
+    light.toggle();
+    delay(166);
+    light.toggle(); // blink 3
 }
 
 // variable / object initializations
@@ -164,27 +195,37 @@ void isr_brake(){ brakes.update(); }
 int main(){
     // initialization step
     initialize_hw();
+    announce_on(led);
     std::signal(SIGINT,isr_ctrlc); // enable CTRL+C graceful exit
+    CsvSimple f(tstamp() + "_out.csv");
+    f.addval("Time-"+tstamp()+" (s)");
+    f.addval("Dist (m)");
+    f.addval("CurrSpeed (m/s)");
+    f.addval("brL");
+    f.addval("brR");
+    f.endl();
+
     
+    // looping step
     while (RUNNING) {
-        std::printf("---------------------------\n");
-        led.toggle();
-        sped.print();
-        brakes.print();
-        std::printf("time elapsed: %d\n", millis());
-        delay(2000);
-    }
-    ////looping step
-    //while(RUNNING){
+        if (millis() % 1000 == 0) {
+            delay(1); // ensure don't accidentally repeat all tasks if finished in under the loop time
+            led.toggle();
+            //sped.print();
+            //brakes.print();
+            //std::printf("time elapsed: %d\n", millis());
+            std::printf("current time: %s\n", tstamp().c_str()); 
 
-    //if(millis()%1000==0){
-    //    led.toggle();
-    //    std::printf("----------------------\n");
-    //    sped.print();
-    //    brakes.print();
-    //    }
+            f.addval(sped.getTimeTotal());
+            f.addval(sped.getDistTotal());
+            f.addval(sped.getVelCurr());
+            f.addval(brakes.stateL);
+            f.addval(brakes.stateR);
+            f.endl();
 
-    //}
+        } // if-millis
+    } // while-loop
+    f.close();
 
     return 0;
 } // main

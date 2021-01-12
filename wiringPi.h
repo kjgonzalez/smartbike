@@ -1,8 +1,12 @@
 #pragma once
 
-/* THIS HEADER EXISTS ONLY AS AN APPROXIMATION OF THE REAL WIRING PI, WHICH CAN ONLY BE COMPILED ON A RASPBERRY PI */
+/* 
+THIS HEADER LIBRARY EXISTS ONLY AS AN APPROXIMATION OF THE REAL 
+    WIRING PI, WHICH CAN ONLY BE COMPILED ON A RASPBERRY PI 
+*/
 
 #include <iostream>
+#pragma warning(disable : 4996) // disable time warning, this warning only exists in visual studio
 #include <chrono>
 #include <time.h>
 
