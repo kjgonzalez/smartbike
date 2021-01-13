@@ -192,12 +192,12 @@ void isr_wheel(){ sped.lap(); }
 void isr_brake(){ brakes.update(); }
 
 // main function
-int main(){
+int main(int argc, char **argv){
     // initialization step
     initialize_hw();
     announce_on(led);
     std::signal(SIGINT,isr_ctrlc); // enable CTRL+C graceful exit
-    CsvSimple f("../output/" + tstamp() + "_out.csv");
+    CsvSimple f("/home/pi/smartbike/output/" + tstamp() + "_out.csv");
     f.addval("Time-"+tstamp()+" (s)");
     f.addval("Dist (m)");
     f.addval("CurrSpeed (m/s)");
