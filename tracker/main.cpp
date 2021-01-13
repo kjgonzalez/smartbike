@@ -32,7 +32,7 @@ missing functions:
 #include "bikeClasses.h"
 
 // software constants
-constexpr bool TOFILE = false;
+constexpr bool TOFILE = true;
 
 // hardware constants
 constexpr int pinLED = 10;
@@ -94,7 +94,7 @@ void isr_brake(){ brakes.update(); }
 // main function
 int main(int argc, char **argv){
     // parse argument(s)
-    std::string base_dir = argc > 1 ? argv[1] : "/home/pi/smartbike/output/";
+    std::string base_dir = argc > 1 ? argv[1] : "./";
     // initialization step
     initialize_hw();
     announce_on(led);
@@ -104,7 +104,8 @@ int main(int argc, char **argv){
     std::string fname = base_dir + tstamp() + "_out.csv";
     std::printf("%s\n", fname.c_str());
     if(TOFILE){
-        f.open("/home/pi/smartbike/output/" + tstamp() + "_out.csv");
+        std::printf("WILL SAVE TO FILE\n");
+        f.open(fname.c_str());
         f.addval("Time-"+tstamp()+" (s)");
         f.addval("Dist (m)");
         f.addval("CurrSpeed (m/s)");
@@ -121,7 +122,6 @@ int main(int argc, char **argv){
             std::printf("%f,%f,%f,%d,%d,\n",
                 sped.getTimeTotal(),sped.getDistTotal(),
                 sped.getVelCurr(), brakes.stateL, brakes.stateR);
-
             if (TOFILE) {
                 f.addval(sped.getTimeTotal());
                 f.addval(sped.getDistTotal());
@@ -129,12 +129,10 @@ int main(int argc, char **argv){
                 f.addval(brakes.stateL);
                 f.addval(brakes.stateR);
                 f.endl();
-            }
-
+            } // if-to_file
         } // if-millis
     } // while-loop
-    // f.close();
-
+    if(TOFILE) f.close();
     return 0;
 } // main
 

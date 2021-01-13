@@ -1,8 +1,13 @@
-Miscellaneous notes
+Miscellaneous Notes
 
 = auto-start a program with crontab ========================
 # @reboot sleep 1 && screen -d -S <screen_name> -m <desired_command>
 
+= tones ====================================================
+tones (and i)
+error: 294
+button press: 659
+success: 988
 
 
 
