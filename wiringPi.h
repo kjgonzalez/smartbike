@@ -34,7 +34,7 @@ void delayMicroseconds(unsigned int howLong) {
 
 void delay(unsigned int howLong) {
   // advanced sleep a given number of seconds, using chrono
-  delayMicroseconds(1e3 * howLong);
+  delayMicroseconds(1000 * howLong);
 }
 
 void wiringPiSetupGpio() { 

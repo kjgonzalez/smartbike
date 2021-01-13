@@ -9,6 +9,7 @@ implemented functions:
   * max speed
   * brake status
   * save data to file
+  * move classes / constants / functions to bikeClasses.h
 
 missing functions: 
   * total elevation change
@@ -28,111 +29,21 @@ missing functions:
 #include <fstream>
 #include <time.h>
 #include <wiringPi.h> // hardware interaction
+#include "bikeClasses.h"
 
 // software constants
-constexpr float pi = 3.14159;
-constexpr float diam = 0.675; // wheel diameter
-constexpr float circ = diam * pi; // wheel circumference
+constexpr bool TOFILE = false;
+
 // hardware constants
 constexpr int pinLED = 10;
 constexpr int pinWHL = 4;
 constexpr int pinBRL = 17;
 constexpr int pinBRR = 27;
 
-std::string tstamp(); // declare function here for ease of use later
 void isr_wheel(); // declare here to avoid issues
 void isr_brake();
 
-// classes
-struct LedMgr{
-    bool state=false;
-    int pin=-1;
-    void (*pSetter)(int,int) = nullptr;
-    LedMgr(void hw_setter(int,int),int pinNum){
-        /* hw_setter models after digitalWrite(int pinNum,int value) */
-        pSetter = hw_setter;
-        pin = pinNum;
-    }
-    void on(){state=true;pSetter(pin,state);}
-    void off(){state=false;pSetter(pin,state);}
-    void toggle(){state=!state;pSetter(pin,state);}
-};
-
-struct Spedometer{
-    unsigned int tprev=0;
-    unsigned int elapsed=800000;
-    unsigned int tStart = 0;
-    float elapsedMin = 8e5; // minimum elapsed time
-    int counter=0; // total rotations since start
-    unsigned int stopThresh = 2500; // if elapsed>thresh, effectively stopped
-    unsigned int (*pMills)() = nullptr;
-    Spedometer(unsigned int mills()){
-        /* mills models after millis() */
-        pMills = mills;
-    }
-    void lap(){
-        /* sensor detects a full rotation */
-        counter++; // update 'total' variables
-        // update 'current' variables
-        elapsed=pMills()-tprev;
-        tprev=pMills();
-        if(elapsed<elapsedMin) elapsedMin = elapsed;
-    }
-    void startTimer(){tStart = pMills(); }
-    float getVelCurr(){
-        /* return current speed, m/s */
-        if (counter == 0) return 0; // prevent noise output
-        if(pMills()-tprev > stopThresh) return 0; // have detected approximate stop
-        else return circ / elapsed * 1000;
-    }
-    float getDistTotal(){ return circ * counter; } // meters
-    float getTimeTotal() { return (pMills()/1000 - tStart/1000); } // seconds
-    float getVelTotal(){ return circ * counter * 1000 / (pMills() - tStart); } // m/s, average
-    float getVelMax() { return circ / elapsedMin * 1000; } // m/s
-    void print(){
-        std::printf("vel_curr %5.2f\t vel_max %5.2f \n",getVelCurr(),getVelMax());
-        std::printf("vel_tot %5.2f\t dist_tot %5.2f\t time_tot %5.2f \n",
-            getVelTotal(), getDistTotal(), getTimeTotal());
-    }
-};
-
-struct Braking{
-    bool stateL = false;
-    bool stateR = false;
-    int pinL = -1;
-    int pinR = -1;
-    int (*pReader)(int) = nullptr;
-    Braking(int hw_reader(int), int pinLeft, int pinRight){
-        /* hw_reader modeled after digitalRead(int pin) */
-        pinL = pinLeft;
-        pinR = pinRight;
-        pReader = hw_reader;
-    }
-    void update(){
-        stateL = pReader(pinL);
-        stateR = pReader(pinR);
-    }
-
-    void print(){
-        std::printf("Left: %d | Right: %d\n",stateL,stateR);
-    }
-};
-
-struct CsvSimple {
-    /* simple, per-item / per-line csv writer */
-    std::ofstream fout;
-    CsvSimple(std::string filename){
-        fout.open(filename);
-    }
-    ~CsvSimple(){ close(); }
-    void addval(int val){ fout << val<< ','; }
-    void addval(float val){ fout << val<< ','; }
-    void addval(double val){ fout << val<< ','; }
-    void addval(std::string val){ fout << val.c_str() << ','; }
-    void endl(){ fout << std::endl; }
-    void close(){ endl(); fout.close();}
-};
-
+// functions
 std::string tstamp() {
     /* return current time as a string in format YYYYMMMDD-HHmmSS */
     time_t timer;
@@ -144,7 +55,6 @@ std::string tstamp() {
     std::string str(date_string);
     return str;
 }
-
 
 void initialize_hw(){
     // any code directly initializing hardware is initialized here
@@ -161,20 +71,10 @@ void initialize_hw(){
 void announce_on(LedMgr light) {
     /* announce to user that program is on, using available outputs */
     std::printf("Tracker program starting... \n");
-    light.toggle();
-    delay(160);
-    light.toggle(); // blink 1
-    delay(160);
-    light.toggle();
-    delay(160);
-    light.toggle(); // blink 2
-    delay(160);
-    light.toggle();
-    delay(160);
-    light.toggle(); // blink 3
+    light.blink(3);
 }
 
-// variable / object initializations
+// global variable / object initializations
 LedMgr led(digitalWrite,pinLED); // external led object
 bool RUNNING=true; // graceful end via ctrl+c
 Spedometer sped(millis); // velocity, distance, and time tracking via hall sensor
@@ -193,41 +93,47 @@ void isr_brake(){ brakes.update(); }
 
 // main function
 int main(int argc, char **argv){
+    // parse argument(s)
+    std::string base_dir = argc > 1 ? argv[1] : "/home/pi/smartbike/output/";
     // initialization step
     initialize_hw();
     announce_on(led);
     std::signal(SIGINT,isr_ctrlc); // enable CTRL+C graceful exit
-    CsvSimple f("/home/pi/smartbike/output/" + tstamp() + "_out.csv");
-    f.addval("Time-"+tstamp()+" (s)");
-    f.addval("Dist (m)");
-    f.addval("CurrSpeed (m/s)");
-    f.addval("brL");
-    f.addval("brR");
-    f.endl();
+    CsvSimple f;
+    std::printf("planned location: ");
+    std::string fname = base_dir + tstamp() + "_out.csv";
+    std::printf("%s\n", fname.c_str());
+    if(TOFILE){
+        f.open("/home/pi/smartbike/output/" + tstamp() + "_out.csv");
+        f.addval("Time-"+tstamp()+" (s)");
+        f.addval("Dist (m)");
+        f.addval("CurrSpeed (m/s)");
+        f.addval("brL");
+        f.addval("brR");
+        f.endl();
+    }
 
-    
     // looping step
     while (RUNNING) {
         if (millis() % 1000 == 0) {
             delay(1); // ensure don't accidentally repeat all tasks if finished in under the loop time
             led.toggle();
             std::printf("%f,%f,%f,%d,%d,\n",
-              sped.getTimeTotal(),sped.getDistTotal(),sped.getVelCurr(), brakes.stateL, brakes.stateR);
-            // sped.print();
-            // brakes.print();
-            std::printf("time elapsed: %d\n", millis());
-            std::printf("current time: %s\n", tstamp().c_str()); 
+                sped.getTimeTotal(),sped.getDistTotal(),
+                sped.getVelCurr(), brakes.stateL, brakes.stateR);
 
-            f.addval(sped.getTimeTotal());
-            f.addval(sped.getDistTotal());
-            f.addval(sped.getVelCurr());
-            f.addval(brakes.stateL);
-            f.addval(brakes.stateR);
-            f.endl();
+            if (TOFILE) {
+                f.addval(sped.getTimeTotal());
+                f.addval(sped.getDistTotal());
+                f.addval(sped.getVelCurr());
+                f.addval(brakes.stateL);
+                f.addval(brakes.stateR);
+                f.endl();
+            }
 
         } // if-millis
     } // while-loop
-    f.close();
+    // f.close();
 
     return 0;
 } // main
