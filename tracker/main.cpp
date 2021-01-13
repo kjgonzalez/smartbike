@@ -8,6 +8,7 @@ implemented functions:
   * current speed
   * max speed
   * brake status
+  * save data to file
 
 missing functions: 
   * total elevation change
@@ -15,7 +16,6 @@ missing functions:
   * user-controlled start of tracking
   * user-controlled stop of tracking
   * brake light activation
-  * save data to file
   * save data to BINARY file
   * turn on brake light
   * use turn-lights
@@ -162,15 +162,15 @@ void announce_on(LedMgr light) {
     /* announce to user that program is on, using available outputs */
     std::printf("Tracker program starting... \n");
     light.toggle();
-    delay(166);
+    delay(160);
     light.toggle(); // blink 1
-    delay(166);
+    delay(160);
     light.toggle();
-    delay(166);
+    delay(160);
     light.toggle(); // blink 2
-    delay(166);
+    delay(160);
     light.toggle();
-    delay(166);
+    delay(160);
     light.toggle(); // blink 3
 }
 
@@ -197,7 +197,7 @@ int main(){
     initialize_hw();
     announce_on(led);
     std::signal(SIGINT,isr_ctrlc); // enable CTRL+C graceful exit
-    CsvSimple f(tstamp() + "_out.csv");
+    CsvSimple f("../output/" + tstamp() + "_out.csv");
     f.addval("Time-"+tstamp()+" (s)");
     f.addval("Dist (m)");
     f.addval("CurrSpeed (m/s)");
@@ -211,9 +211,11 @@ int main(){
         if (millis() % 1000 == 0) {
             delay(1); // ensure don't accidentally repeat all tasks if finished in under the loop time
             led.toggle();
-            //sped.print();
-            //brakes.print();
-            //std::printf("time elapsed: %d\n", millis());
+            std::printf("%f,%f,%f,%d,%d,\n",
+              sped.getTimeTotal(),sped.getDistTotal(),sped.getVelCurr(), brakes.stateL, brakes.stateR);
+            // sped.print();
+            // brakes.print();
+            std::printf("time elapsed: %d\n", millis());
             std::printf("current time: %s\n", tstamp().c_str()); 
 
             f.addval(sped.getTimeTotal());
