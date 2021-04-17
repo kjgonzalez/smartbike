@@ -52,7 +52,7 @@ struct Spedometer {
     void startTimer() { tStart = pMills(); }
     float getVelCurr() {
         /* return current speed, m/s */
-        if (counter == 0) return 0; // prevent noise output
+        //if (counter == 0) return 0; // prevent noise output
         if (pMills() - tprev > stopThresh) return 0; // have detected approximate stop
         else return circ / elapsed * 1000;
     }

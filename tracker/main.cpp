@@ -119,9 +119,6 @@ int main(int argc, char **argv){
         if (millis() % 1000 == 0) {
             delay(1); // ensure don't accidentally repeat all tasks if finished in under the loop time
             led.toggle();
-            std::printf("%f,%f,%f,%d,%d,\n",
-                sped.getTimeTotal(),sped.getDistTotal(),
-                sped.getVelCurr(), brakes.stateL, brakes.stateR);
             if (TOFILE) {
                 f.addval(sped.getTimeTotal());
                 f.addval(sped.getDistTotal());
